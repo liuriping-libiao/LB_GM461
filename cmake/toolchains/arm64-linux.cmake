@@ -1,0 +1,27 @@
+set(CMAKE_SYSTEM_NAME Linux)
+set(CMAKE_SYSTEM_PROCESSOR aarch64)
+
+# Arm GNU Toolchain (Windows-hosted, aarch64-none-linux-gnu target)
+# Default: look for toolchain in C:\arm-gnu-toolchain or override via ARM_TOOLCHAIN_ROOT
+if (NOT ARM_TOOLCHAIN_ROOT)
+    if (EXISTS "C:/arm-gnu-toolchain/bin/aarch64-none-linux-gnu-gcc.exe")
+        set(ARM_TOOLCHAIN_ROOT "C:/arm-gnu-toolchain")
+    elseif (EXISTS "$ENV{ARM_TOOLCHAIN_ROOT}/bin/aarch64-none-linux-gnu-gcc.exe")
+        set(ARM_TOOLCHAIN_ROOT "$ENV{ARM_TOOLCHAIN_ROOT}")
+    endif()
+endif()
+
+if (ARM_TOOLCHAIN_ROOT)
+    set(CMAKE_C_COMPILER "${ARM_TOOLCHAIN_ROOT}/bin/aarch64-none-linux-gnu-gcc.exe")
+    set(CMAKE_CXX_COMPILER "${ARM_TOOLCHAIN_ROOT}/bin/aarch64-none-linux-gnu-g++.exe")
+    set(CMAKE_SYSROOT "${ARM_TOOLCHAIN_ROOT}/aarch64-none-linux-gnu/libc")
+else()
+    # Fallback: assume in PATH (e.g. WSL or native Linux)
+    set(CMAKE_C_COMPILER aarch64-linux-gnu-gcc)
+    set(CMAKE_CXX_COMPILER aarch64-linux-gnu-g++)
+endif()
+
+set(CMAKE_FIND_ROOT_PATH_MODE_PROGRAM NEVER)
+set(CMAKE_FIND_ROOT_PATH_MODE_LIBRARY ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_INCLUDE ONLY)
+set(CMAKE_FIND_ROOT_PATH_MODE_PACKAGE ONLY)

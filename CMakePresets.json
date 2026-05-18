@@ -1,0 +1,41 @@
+{
+  "version": 3,
+  "cmakeMinimumRequired": {
+    "major": 3,
+    "minor": 20,
+    "patch": 0
+  },
+  "configurePresets": [
+    {
+      "name": "windows-debug",
+      "displayName": "Windows Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/windows-debug",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LBGM461_ENABLE_SYNTHETIC_CAMERA": "ON"
+      }
+    },
+    {
+      "name": "arm64-linux-debug",
+      "displayName": "ARM64 Linux Debug",
+      "generator": "Ninja",
+      "binaryDir": "${sourceDir}/out/build/arm64-linux-debug",
+      "toolchainFile": "${sourceDir}/cmake/toolchains/arm64-linux.cmake",
+      "cacheVariables": {
+        "CMAKE_BUILD_TYPE": "Debug",
+        "LBGM461_ENABLE_SYNTHETIC_CAMERA": "ON"
+      }
+    }
+  ],
+  "buildPresets": [
+    {
+      "name": "windows-debug",
+      "configurePreset": "windows-debug"
+    },
+    {
+      "name": "arm64-linux-debug",
+      "configurePreset": "arm64-linux-debug"
+    }
+  ]
+}

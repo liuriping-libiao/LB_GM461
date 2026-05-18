@@ -1,0 +1,96 @@
+syntax = "proto3";
+
+package MyGrpcService;
+
+service ImageService {
+  rpc ClientTest (SendRequest) returns (SendResponse);
+  rpc GetImages (SendRequest) returns (ImageResponse);
+  rpc GetImages2 (SendRequest) returns (ImageResponse2);
+  rpc GetImages3 (SendRequest) returns (ImageResponse3);
+  rpc SendImages (stream ImageRequest) returns (stream ImageResponse);
+  rpc SendCoordinates (CoordinateRequest) returns (CoordinateResponse);
+  rpc StartStream (SendRequest) returns (SendResponse);
+  rpc StopStream (SendRequest) returns (SendResponse);
+  rpc InitModels (ProtoModelInfos) returns (SendResponse);
+  rpc GetYoloResult (ProtoYoloRequest) returns (ProtoYoloResponse);
+}
+
+message NullMessage {}
+
+message SendRequest {
+  string request = 1;
+}
+
+message SendResponse {
+  string status = 1;
+}
+
+message ImageRequest {
+  string status = 1;
+}
+
+message ImageResponse {
+  string ip = 1;
+  bytes color_data = 2;
+  bytes Depth_data = 3;
+  bytes DepthRender_data = 4;
+}
+
+message ImageResponse2 {
+  string ip = 1;
+  bytes color_data = 2;
+  bytes Depth_data = 3;
+}
+
+message ImageResponse3 {
+  string ip = 1;
+  bytes color_data = 2;
+  bytes Depth_data = 3;
+  CameraIntrinsics camera_intrinsics = 4;
+}
+
+message CoordinateRequest {
+  double x = 1;
+  double y = 2;
+  double z = 3;
+}
+
+message CoordinateResponse {}
+
+message CameraIntrinsics {
+  int32 width = 1;
+  int32 height = 2;
+  double ppx = 3;
+  double ppy = 4;
+  double fx = 5;
+  double fy = 6;
+  int32 model = 7;
+  repeated double coeffs = 8;
+}
+
+message ProtoModelInfo {
+  string name = 1;
+  int32 type = 2;
+  string path = 3;
+  float confidence_threshold = 4;
+  float nms_threshold = 5;
+  bool is_need_mask = 6;
+  bool is_quick_model = 7;
+  int32 image_size = 8;
+}
+
+message ProtoModelInfos {
+  repeated ProtoModelInfo models = 1;
+}
+
+message ProtoYoloRequest {
+  ProtoModelInfo model = 1;
+  string path_suffix = 2;
+  bool is_only_images = 3;
+}
+
+message ProtoYoloResponse {
+  string status = 1;
+  string path = 2;
+  int64 Ticks = 3;
+}

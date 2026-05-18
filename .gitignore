@@ -1,0 +1,22 @@
+# 构建输出
+out/
+build/
+*.o
+*.obj
+
+# vcpkg 本地缓存
+vcpkg_installed/
+
+# IDE
+.vs/
+.vscode/
+*.suo
+*.user
+*.sln.docstates
+CMakeUserPresets.json
+
+# OS
+Thumbs.db
+.DS_Store
+
+# 二进制产物（SDK 库保留在 lib/ 中通过 Git LFS 或直接提交）
