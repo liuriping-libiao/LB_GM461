@@ -63,6 +63,34 @@ public:
         }
     }
 
+    grpc::Status GetImages3(
+        grpc::ServerContext* /*context*/,
+        const MyGrpcService::SendRequest* /*request*/,
+        MyGrpcService::ImageResponse3* response) override {
+        lbgm461::FrameSnapshot snapshot;
+        if (!service_.GrabFrame(snapshot)) {
+            return grpc::Status(grpc::StatusCode::INTERNAL, "grab failed");
+        }
+
+        response->set_ip(snapshot.ip);
+        response->set_color_data(snapshot.color.data.data(), snapshot.color.data.size());
+        response->set_depth_data(snapshot.depth.data.data(), snapshot.depth.data.size());
+
+        auto* intr = response->mutable_camera_intrinsics();
+        intr->set_width(snapshot.intrinsics.width);
+        intr->set_height(snapshot.intrinsics.height);
+        intr->set_ppx(snapshot.intrinsics.ppx);
+        intr->set_ppy(snapshot.intrinsics.ppy);
+        intr->set_fx(snapshot.intrinsics.fx);
+        intr->set_fy(snapshot.intrinsics.fy);
+        intr->set_model(snapshot.intrinsics.model);
+        for (double c : snapshot.intrinsics.coeffs) {
+            intr->add_coeffs(c);
+        }
+
+        return grpc::Status::OK;
+    }
+
 private:
     lbgm461::CameraService& service_;
 };

@@ -27,6 +27,7 @@ public:
     bool Initialize();
     bool InitModels(const std::string& model_name);
     GetYoloResultResponse GetYoloResult(const GetYoloResultRequest& request);
+    bool GrabFrame(FrameSnapshot& out);
     void Shutdown();
 
     std::string LastError() const;

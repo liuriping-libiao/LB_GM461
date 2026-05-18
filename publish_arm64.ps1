@@ -1,17 +1,88 @@
-# LBGM461 camera_service - Windows 交叉编译 ARM64 Linux + 部署脚本
-# 前置条件:
-#   1. Arm GNU Toolchain 解压到 C:\arm-gnu-toolchain
-#      (下载: https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads)
-#   2. vcpkg 安装在 C:\vcpkg
-#   3. UpdateTool_1.0.0 在 ..\UpdateTool_1.0.0\
+<#
+.SYNOPSIS
+    LBGM461 camera_service - Windows 交叉编译 ARM64 Linux + 部署脚本
+
+.DESCRIPTION
+    在 Windows 上交叉编译 camera_service (ARM64 Linux)，打包发布目录并部署到目标设备。
+    支持多摄像头：自动生成 start_all.sh 启动脚本，每个摄像头运行独立进程，
+    分配不同的 gRPC 端口和共享内存前缀。
+
+.PARAMETER ToolchainRoot
+    Arm GNU Toolchain 根目录路径。
+    下载: https://developer.arm.com/downloads/-/arm-gnu-toolchain-downloads
+
+.PARAMETER TargetIP
+    部署目标设备的 IP 地址。
+
+.PARAMETER TargetUser
+    目标设备的 SSH 用户名。
+
+.PARAMETER TargetPassword
+    目标设备的 SSH 密码。
+
+.PARAMETER TargetPort
+    目标设备的 SSH 端口，默认 22。
+
+.PARAMETER RemotePath
+    目标设备上的部署目录。
+
+.PARAMETER CameraIPs
+    摄像头 IP 地址数组。支持 1 个或多个摄像头。
+    每个摄像头会启动一个独立的 camera_service 进程。
+
+.PARAMETER BasePort
+    第一个摄像头实例的 gRPC 监听端口，后续实例端口依次递增。
+    例如 BasePort=5111，两个摄像头分别监听 5111 和 5112。
+
+.PARAMETER SkipBuild
+    跳过编译步骤，仅执行部署。
+
+.PARAMETER SkipDeploy
+    跳过部署步骤，仅执行编译和打包。
+
+.EXAMPLE
+    # 默认双摄像头编译+部署
+    .\publish_arm64.ps1
+
+.EXAMPLE
+    # 自定义摄像头 IP
+    .\publish_arm64.ps1 -CameraIPs @("192.168.1.10", "192.168.1.11")
+
+.EXAMPLE
+    # 单摄像头
+    .\publish_arm64.ps1 -CameraIPs @("169.254.0.10")
+
+.EXAMPLE
+    # 三摄像头，自定义端口起始
+    .\publish_arm64.ps1 -CameraIPs @("169.254.0.10", "169.254.0.11", "169.254.0.12") -BasePort 6000
+
+.EXAMPLE
+    # 仅编译，不部署
+    .\publish_arm64.ps1 -SkipDeploy
+
+.EXAMPLE
+    # 仅部署（已编译过），指定目标
+    .\publish_arm64.ps1 -SkipBuild -TargetIP "10.1.0.100" -TargetUser "admin" -TargetPassword "pass123"
+
+.NOTES
+    前置条件:
+      1. Arm GNU Toolchain 解压到 C:\arm-gnu-toolchain
+      2. vcpkg 安装在 C:\vcpkg
+      3. UpdateTool_1.0.0 在 ..\UpdateTool_1.0.0\
+    
+    目标设备运行:
+      cd /home/cat/camera_service && chmod +x start_all.sh camera_service && ./start_all.sh
+#>
 
 param(
     [string]$ToolchainRoot = "C:\arm-gnu-toolchain",
-    [string]$TargetIP = "10.1.0.66",
+    [string]$TargetIP = "10.1.2.206",
     [string]$TargetUser = "cat",
     [string]$TargetPassword = "temppwd",
     [int]$TargetPort = 22,
     [string]$RemotePath = "/home/cat/camera_service",
+    [string[]]$CameraIPs = @("169.254.0.10", "169.254.0.11"),
+    [int]$BasePort = 5111,
     [switch]$SkipBuild,
     [switch]$SkipDeploy
 )
@@ -90,6 +161,37 @@ if (-not $SkipBuild) {
     Copy-Item "$SdkLibDir\libtycam.so*" $PublishDir -Force
     Copy-Item "$SdkLibDir\libtyimgproc.so*" $PublishDir -Force
 
+    # Generate startup script for dual-camera
+    $StartScript = @"
+#!/bin/bash
+SCRIPT_DIR=`$(cd "`$(dirname "`$0")" && pwd)
+cd "`$SCRIPT_DIR"
+export LD_LIBRARY_PATH="`$SCRIPT_DIR:`$LD_LIBRARY_PATH"
+
+# Kill existing camera_service processes
+pkill -9 -x camera_service 2>/dev/null
+sleep 3
+
+"@
+    for ($i = 0; $i -lt $CameraIPs.Count; $i++) {
+        $camIP = $CameraIPs[$i]
+        $port = $BasePort + $i
+        $prefix = "/dev/shm/cam$($i + 1)"
+        $StartScript += @"
+echo "Starting camera_service instance $($i + 1): camera=$camIP listen=0.0.0.0:$port shm=$prefix"
+./camera_service --camera-ip $camIP --listen 0.0.0.0:$port --shared-prefix $prefix &`n
+"@
+    }
+    $StartScript += @"
+echo "All camera_service instances started."
+wait
+"@
+    $StartScriptPath = Join-Path $PublishDir "start_all.sh"
+    # Use UTF8 without BOM and LF line endings for Linux
+    $StartScript = $StartScript -replace "`r`n", "`n"
+    $Utf8NoBom = New-Object System.Text.UTF8Encoding $false
+    [System.IO.File]::WriteAllText($StartScriptPath, $StartScript, $Utf8NoBom)
+
     Write-Host ""
     Write-Host "=== Build Complete ===" -ForegroundColor Green
     Write-Host "Published to: $PublishDir"
@@ -126,5 +228,10 @@ if (-not $SkipDeploy) {
 
     Write-Host ""
     Write-Host "=== Deployment Complete ===" -ForegroundColor Green
-    Write-Host "Run on target: cd $RemotePath && chmod +x camera_service && LD_LIBRARY_PATH=. ./camera_service --camera-ip <IP> --port 5111"
+    Write-Host "Run on target: cd $RemotePath && chmod +x start_all.sh camera_service && ./start_all.sh"
+    Write-Host ""
+    Write-Host "Camera instances:" -ForegroundColor Yellow
+    for ($i = 0; $i -lt $CameraIPs.Count; $i++) {
+        Write-Host "  [$($i+1)] camera=$($CameraIPs[$i])  listen=0.0.0.0:$($BasePort + $i)  shm=/dev/shm/cam$($i+1)"
+    }
 }

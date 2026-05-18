@@ -63,6 +63,14 @@ GetYoloResultResponse CameraService::GetYoloResult(const GetYoloResultRequest& r
     return response;
 }
 
+bool CameraService::GrabFrame(FrameSnapshot& out) {
+    if (!camera_.Grab(out, config_.grab_timeout_ms)) {
+        SetError(camera_.LastError());
+        return false;
+    }
+    return true;
+}
+
 void CameraService::Shutdown() {
     camera_.Stop();
 }
