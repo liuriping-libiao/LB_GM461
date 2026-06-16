@@ -110,7 +110,7 @@ public:
                     if (status == TY_STATUS_OK) {
                         hDevice_ = hDev;
                         hIface_ = hIface;
-                        std::cout << "[SDK] Connected via IP: " << config_.camera_ip << std::endl;
+                        std::cout << "[SDK][" << config_.camera_ip << "] Connected via IP" << std::endl;
                         break;
                     }
                     TYCloseInterface(hIface);
@@ -130,7 +130,7 @@ public:
                     if (status == TY_STATUS_OK) {
                         hDevice_ = hDev;
                         hIface_ = hIface;
-                        std::cout << "[SDK] Connected via SN: " << config_.camera_sn << std::endl;
+                        std::cout << "[SDK][" << config_.camera_ip << "] Connected via SN: " << config_.camera_sn << std::endl;
                         break;
                     }
                     TYCloseInterface(hIface);
@@ -145,7 +145,7 @@ public:
             // Get device info
             TY_DEVICE_BASE_INFO devInfo;
             if (TYGetDeviceInfo(hDevice_, &devInfo) == TY_STATUS_OK) {
-                std::cout << "[SDK] Device: " << devInfo.modelName
+                std::cout << "[SDK][" << config_.camera_ip << "] Device: " << devInfo.modelName
                           << " SN=" << devInfo.id << std::endl;
             }
 
@@ -167,7 +167,7 @@ public:
                 std::vector<TY_ENUM_ENTRY> depthModes(depthModeCount);
                 TYGetEnumEntryInfo(hDevice_, TY_COMPONENT_DEPTH_CAM, TY_ENUM_IMAGE_MODE,
                                    depthModes.data(), depthModeCount, &depthModeCount);
-                std::cout << "[SDK] 深度相机支持的图像模式 (" << depthModeCount << " 种):" << std::endl;
+                std::cout << "[SDK][" << config_.camera_ip << "] 深度相机支持的图像模式 (" << depthModeCount << " 种):" << std::endl;
                 for (uint32_t i = 0; i < depthModeCount; i++) {
                     std::cout << "  [" << i << "] " << depthModes[i].description
                               << " (value=0x" << std::hex << depthModes[i].value << std::dec << ")" << std::endl;
@@ -175,7 +175,7 @@ public:
 
                 uint32_t currentDepthMode = 0;
                 TYGetEnum(hDevice_, TY_COMPONENT_DEPTH_CAM, TY_ENUM_IMAGE_MODE, &currentDepthMode);
-                std::cout << "[SDK] 深度相机当前模式: 0x" << std::hex << currentDepthMode << std::dec << std::endl;
+                std::cout << "[SDK][" << config_.camera_ip << "] 深度相机当前模式: 0x" << std::hex << currentDepthMode << std::dec << std::endl;
             }
 
             // 枚举彩色相机支持的图像模式
@@ -185,7 +185,7 @@ public:
                 std::vector<TY_ENUM_ENTRY> colorModes(colorModeCount);
                 TYGetEnumEntryInfo(hDevice_, TY_COMPONENT_RGB_CAM, TY_ENUM_IMAGE_MODE,
                                    colorModes.data(), colorModeCount, &colorModeCount);
-                std::cout << "[SDK] 彩色相机支持的图像模式 (" << colorModeCount << " 种):" << std::endl;
+                std::cout << "[SDK][" << config_.camera_ip << "] 彩色相机支持的图像模式 (" << colorModeCount << " 种):" << std::endl;
                 for (uint32_t i = 0; i < colorModeCount; i++) {
                     std::cout << "  [" << i << "] " << colorModes[i].description
                               << " (value=0x" << std::hex << colorModes[i].value << std::dec << ")" << std::endl;
@@ -193,14 +193,14 @@ public:
 
                 uint32_t currentColorMode = 0;
                 TYGetEnum(hDevice_, TY_COMPONENT_RGB_CAM, TY_ENUM_IMAGE_MODE, &currentColorMode);
-                std::cout << "[SDK] 彩色相机当前模式: 0x" << std::hex << currentColorMode << std::dec << std::endl;
+                std::cout << "[SDK][" << config_.camera_ip << "] 彩色相机当前模式: 0x" << std::hex << currentColorMode << std::dec << std::endl;
             }
 
             // Get depth scale unit
             float scaleUnit = 1.0f;
             TYGetFloat(hDevice_, TY_COMPONENT_DEPTH_CAM, TY_FLOAT_SCALE_UNIT, &scaleUnit);
             config_.depth_scale = scaleUnit;
-            std::cout << "[SDK] 深度缩放单位: " << scaleUnit << std::endl;
+            std::cout << "[SDK][" << config_.camera_ip << "] 深度缩放单位: " << scaleUnit << std::endl;
 
             // 获取深度相机标定数据
             depthCalib_ = {};
@@ -219,11 +219,11 @@ public:
                 for (int i = 0; i < 12; i++) {
                     intrinsics_.coeffs[i] = static_cast<double>(depthCalib_.distortion.data[i]);
                 }
-                std::cout << "[SDK] 深度相机内参: " << intrinsics_.width << "x" << intrinsics_.height
+                std::cout << "[SDK][" << config_.camera_ip << "] 深度相机内参: " << intrinsics_.width << "x" << intrinsics_.height
                           << " fx=" << intrinsics_.fx << " fy=" << intrinsics_.fy
                           << " cx=" << intrinsics_.ppx << " cy=" << intrinsics_.ppy << std::endl;
             } else {
-                std::cout << "[SDK] 警告: 获取深度相机内参失败，使用默认值" << std::endl;
+                std::cout << "[SDK][" << config_.camera_ip << "] 警告: 获取深度相机内参失败，使用默认值" << std::endl;
             }
 
             // 获取彩色相机标定数据（用于坐标对齐映射）
@@ -231,12 +231,12 @@ public:
             status = TYGetStruct(hDevice_, TY_COMPONENT_RGB_CAM,
                                  TY_STRUCT_CAM_CALIB_DATA, &colorCalib_, sizeof(colorCalib_));
             if (status == TY_STATUS_OK && colorCalib_.intrinsicWidth > 0) {
-                std::cout << "[SDK] 彩色相机内参: " << colorCalib_.intrinsicWidth << "x" << colorCalib_.intrinsicHeight
+                std::cout << "[SDK][" << config_.camera_ip << "] 彩色相机内参: " << colorCalib_.intrinsicWidth << "x" << colorCalib_.intrinsicHeight
                           << " fx=" << colorCalib_.intrinsic.data[0] << " fy=" << colorCalib_.intrinsic.data[4]
                           << " cx=" << colorCalib_.intrinsic.data[2] << " cy=" << colorCalib_.intrinsic.data[5] << std::endl;
                 hasColorCalib_ = true;
             } else {
-                std::cout << "[SDK] 警告: 获取彩色相机内参失败，将跳过坐标对齐" << std::endl;
+                std::cout << "[SDK][" << config_.camera_ip << "] 警告: 获取彩色相机内参失败，将跳过坐标对齐" << std::endl;
                 hasColorCalib_ = false;
             }
 
@@ -247,7 +247,7 @@ public:
             frameBuffer_[1].resize(frameSize);
             TYCHECK(TYEnqueueBuffer(hDevice_, frameBuffer_[0].data(), frameSize));
             TYCHECK(TYEnqueueBuffer(hDevice_, frameBuffer_[1].data(), frameSize));
-            std::cout << "[SDK] Frame buffer size: " << frameSize << " bytes" << std::endl;
+            std::cout << "[SDK][" << config_.camera_ip << "] Frame buffer size: " << frameSize << " bytes" << std::endl;
 
             // Disable trigger mode (continuous capture)
             bool hasTrigger = false;
@@ -298,7 +298,7 @@ public:
                 running_ = false;
                 return false;
             }
-            std::cout << "[SDK] Capture started" << std::endl;
+            std::cout << "[SDK][" << config_.camera_ip << "] Capture started" << std::endl;
         }
 #endif
 
@@ -397,18 +397,18 @@ private:
                     consecutive_errors++;
                 } else {
                     consecutive_errors++;
-                    std::cerr << "[SDK] TYFetchFrame error (" << consecutive_errors << "/"
+                    std::cerr << "[SDK][" << config_.camera_ip << "] TYFetchFrame error (" << consecutive_errors << "/"
                               << kMaxConsecutiveErrors << "): " << TYErrorString(status) << std::endl;
                 }
 
                 // Auto-reconnect if too many consecutive failures
                 if (consecutive_errors >= kMaxConsecutiveErrors) {
-                    std::cerr << "[SDK] Too many errors, attempting reconnect..." << std::endl;
+                    std::cerr << "[SDK][" << config_.camera_ip << "] Too many errors, attempting reconnect..." << std::endl;
                     if (Reconnect()) {
                         consecutive_errors = 0;
-                        std::cout << "[SDK] Reconnect successful" << std::endl;
+                        std::cout << "[SDK][" << config_.camera_ip << "] Reconnect successful" << std::endl;
                     } else {
-                        std::cerr << "[SDK] Reconnect failed: " << last_error_
+                        std::cerr << "[SDK][" << config_.camera_ip << "] Reconnect failed: " << last_error_
                                   << ", retry in 5s..." << std::endl;
                         consecutive_errors = 0;  // Reset to avoid rapid retry
                         std::this_thread::sleep_for(std::chrono::seconds(5));
@@ -520,7 +520,7 @@ private:
             return false;
         }
 
-        std::cout << "[SDK] Reconnect: capture restarted" << std::endl;
+        std::cout << "[SDK][" << config_.camera_ip << "] Reconnect: capture restarted" << std::endl;
         return true;
     }
 #endif
